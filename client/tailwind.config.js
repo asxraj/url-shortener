@@ -11,6 +11,7 @@ module.exports = {
         poppins: ["Poppins", "sans-serif"],
         inter: ["Inter", "sans-serif"],
         bungee: ["Bungee Outline", "cursive"],
+        epilogue: ["Epilogue", "sans-serif"],
       },
       flex: {
         2: "2 2 0%",

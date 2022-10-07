@@ -5,7 +5,7 @@ import Section from "./Section";
 
 const Navbar = () => {
   return (
-    <div className="flex items-center w-full py-2 bg-[#F9FAFE]">
+    <nav className="flex items-center w-full py-2">
       <Section className="justify-between">
         <Link href="/" className="">
           <a href="/">
@@ -20,19 +20,19 @@ const Navbar = () => {
         <div className="flex items-center gap-4">
           <a
             href="/login"
-            className="text-md font-medium rounded-md text-[#24335A] select-none px-5 py-2 transition-all hover:bg-gray-200 hover:underline "
+            className="text-md font-medium rounded-md text-[#24335A] select-none px-5 py-2 transition-all hover:bg-gray-200 "
           >
             Log in
           </a>
           <a
             href="/signup"
-            className="text-md font-medium text-white bg-blue-600 px-5 py-2 rounded-lg select-none transition-all hover:bg-blue-800 hover:underline"
+            className="text-md font-medium text-white bg-blue-600 px-5 py-2 rounded-lg select-none transition-all hover:bg-blue-800"
           >
             Sign up
           </a>
         </div>
       </Section>
-    </div>
+    </nav>
   );
 };
 
