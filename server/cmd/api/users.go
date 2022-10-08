@@ -2,23 +2,41 @@ package main
 
 import (
 	"net/http"
+
+	"github.com/asxraj/url-shortener/internal/models"
+	"github.com/asxraj/url-shortener/internal/validator"
 )
 
 func (app *application) registerUser(w http.ResponseWriter, r *http.Request) {
+	var user models.User
 
-	var input struct {
-		Firstname string `json:"first_name"`
-		Lastname  string `json:"last_name"`
-		Username  string `json:"username"`
-		Email     string `json:"email"`
-		Password  string `json:"password"`
-	}
-
-	err := app.readJSON(w, r, &input)
+	err := app.readJSON(w, r, &user)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	app.writeJSON(w, http.StatusOK, map[string]any{"user": input}, nil)
+	v := validator.New()
+
+	if models.ValidateUser(v, &user); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = user.Set()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.models.Users.Insert(&user)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, map[string]any{"user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }

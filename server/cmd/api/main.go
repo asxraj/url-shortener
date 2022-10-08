@@ -1,17 +1,15 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/asxraj/url-shortener/internal/database"
 	"github.com/asxraj/url-shortener/internal/jsonlog"
 	"github.com/asxraj/url-shortener/internal/models"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 )
 
@@ -46,10 +44,11 @@ func main() {
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
-	db, err := openDB(cfg)
+	db, err := database.OpenDB(cfg.dsn)
 	if err != nil {
 		logger.PrintFatal(err, nil)
 	}
+	defer db.Close()
 	logger.PrintInfo("database connection pool established", nil)
 
 	app := &application{
@@ -74,22 +73,4 @@ func main() {
 	if err != nil {
 		logger.PrintFatal(err, nil)
 	}
-}
-
-func openDB(cfg config) (*sql.DB, error) {
-	db, err := sql.Open("pgx", cfg.dsn)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }

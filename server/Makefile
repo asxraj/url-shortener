@@ -42,7 +42,7 @@ db/migrations/new:
 
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up
-db/migrations/up: confirm
+db/migrations/up: 
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${SHORTURL_DB_DSN} up
 
