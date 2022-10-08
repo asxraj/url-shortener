@@ -7,16 +7,38 @@ const Navbar = () => {
   return (
     <nav className="flex items-center w-full py-2">
       <Section className="justify-between">
-        <Link href="/" className="">
-          <a href="/">
-            <div className="flex items-center gap-2">
-              <AiOutlineLink className="text-5xl text-gray-600" />
-              <span className="text-5xl text-gray-600 font-semibold font-bungee tracking-wider ">
-                URL
-              </span>
-            </div>
+        <div className="flex items-center">
+          <Link href="/" className="">
+            <a href="/">
+              <div className="flex items-center gap-2">
+                <AiOutlineLink className="text-2xl md:text-5xl text-gray-600" />
+                <span className="text-2xl md:text-4xl text-gray-600 font-semibold font-bungee tracking-wider ">
+                  shortURL
+                </span>
+              </div>
+            </a>
+          </Link>
+        </div>
+        <div className="flex items-center justify-between">
+          <a
+            href="/pricing"
+            className="text-md font-medium rounded-md text-[#24335A] select-none px-5 py-2 transition-all hover:underline hover:decoration-white "
+          >
+            Products
           </a>
-        </Link>
+          <a
+            href="/pricing"
+            className="text-md font-medium rounded-md text-[#24335A] select-none px-5 py-2 transition-all hover:underline hover:decoration-white "
+          >
+            Pricing
+          </a>
+          <a
+            href="/pricing"
+            className="text-md font-medium rounded-md text-[#24335A] select-none px-5 py-2 transition-all hover:underline hover:decoration-white "
+          >
+            Pricing
+          </a>
+        </div>
         <div className="flex items-center gap-4">
           <a
             href="/login"

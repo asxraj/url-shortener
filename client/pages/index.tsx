@@ -4,8 +4,13 @@ import Navbar from "../components/Navbar";
 import Section from "../components/Section";
 import { BsCheckLg, BsLink } from "react-icons/bs";
 import Footer from "../components/Footer";
+import { FormErrors } from "../utils/types";
+import { useState } from "react";
 
 const Home: NextPage = () => {
+  const [error, setError] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
+
   const submitHandler = (e: any) => {
     e.preventDefault();
 
@@ -13,6 +18,12 @@ const Home: NextPage = () => {
     const payload = Object.fromEntries(data.entries());
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
+
+    if (!payload.url) {
+      setError(true);
+      setErrorMsg("url must be provided");
+      return;
+    }
 
     const request = {
       url: payload.url,
@@ -44,38 +55,48 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <Navbar />
-      <Section className="justify-center lg:flex-row flex-col mt-20 gap-16">
-        <div className="flex justify-center items-center p-4 bg-[#F8F9FA] rounded-xl">
+      <Section className="justify-center lg:flex-row flex-col mt-20 gap-24">
+        <div className="flex w-fit justify-center items-center p-4 bg-[#F8F9FA] rounded-xl">
           <div className="p-5 py-8">
             <form onSubmit={submitHandler} className="flex flex-col gap-6">
               {/* URL */}
-              <div className="flex flex-col gap-3">
-                <label className="text-xl  font-bold">
+              <div className="flex flex-col gap-2 lg:gap-3">
+                <label className="text-lg lg:text-xl  font-bold">
                   Enter URL to Shorten
                 </label>
 
-                <div className="flex items-center w-[375px] rounded-lg bg-white border-[1px] border-gray-900 p-4 gap-2">
+                <div
+                  className={`flex items-center w-[275px] xs:w-[325px] sm:w-[375px] rounded-lg bg-white border-[1px] border-gray-900 p-2 lg:p-3 gap-2 ${
+                    error ? "bg-red-200 border-red-400" : ""
+                  }`}
+                >
                   <label htmlFor="url" className="">
                     <BsLink className="text-2xl font-medium text-black" />
                   </label>
 
                   <input
-                    className="flex-1 outline-none rounded-r-lg  text-black"
+                    className={`flex-1 outline-none rounded-r-lg  text-black placeholder:text-red-400 ${
+                      error ? "bg-red-200" : ""
+                    }`}
                     type="text"
                     name="url"
+                    onChange={() => setError(false)}
                     id="url"
+                    placeholder={`${error ? errorMsg : ""}`}
                     autoFocus={true}
                   />
                 </div>
               </div>
 
               {/* ALIAS */}
-              <div className="flex flex-col gap-3">
-                <label className="text-xl font-bold">Customize your link</label>
+              <div className="flex flex-col gap-2 lg:gap-3">
+                <label className="text-lg lg:text-xl font-bold">
+                  Customize your link
+                </label>
 
-                <div className="flex flex-col w-[375px] rounded-lg bg-white border-[1px] border-gray-900 gap-2">
+                <div className="flex flex-col w-[275px] xs:w-[325px] lg:w-[375px] rounded-lg bg-white border-[1px] border-gray-900 gap-2">
                   <div className="grid grid-cols-3 items-center gap-2">
-                    <div className="col-span-2 border-r-[1px] border-gray-700 p-4 text-center">
+                    <div className="col-span-2 border-r-[1px] border-gray-700 p-2 lg:p-3 text-center">
                       <label className="text-lg font-medium tracking-wide">
                         shortenURL.com
                       </label>
@@ -117,16 +138,16 @@ const Home: NextPage = () => {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <BsCheckLg className="text-green-500" />
+              <BsCheckLg className="text-green-600 sm:text-green-500" />
               <p className="text-lg">Customizable URLs</p>
             </div>
             <div className="flex items-center gap-2">
-              <BsCheckLg className="text-green-500" />
+              <BsCheckLg className="text-green-600 sm:text-green-500" />
               <p className="text-lg">Managing Link History</p>
             </div>
             <div className="flex items-center gap-2">
-              <BsCheckLg className="text-green-500" />
-              <p className="text-lg">Link Analysis</p>
+              <BsCheckLg className="text-green-600 sm:text-green-500" />
+              <p className="text-lg">Analyze Link Traffic</p>
             </div>
           </div>
 
