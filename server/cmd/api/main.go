@@ -1,22 +1,32 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/asxraj/url-shortener/internal/jsonlog"
+	"github.com/asxraj/url-shortener/internal/models"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 )
+
+var version = "1.0.0"
 
 type config struct {
 	port int
 	env  string
+	dsn  string
 }
 
 type application struct {
 	config config
+	logger *jsonlog.Logger
+	models models.Models
 }
 
 func main() {
@@ -32,8 +42,20 @@ func main() {
 		fmt.Println(err)
 	}
 
+	cfg.dsn = os.Getenv("SHORTURL_DB_DSN")
+
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
+
+	db, err := openDB(cfg)
+	if err != nil {
+		logger.PrintFatal(err, nil)
+	}
+	logger.PrintInfo("database connection pool established", nil)
+
 	app := &application{
 		config: cfg,
+		logger: logger,
+		models: models.New(db),
 	}
 
 	srv := &http.Server{
@@ -44,8 +66,30 @@ func main() {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Println("Starting up server on port", srv.Addr)
-	log.Fatal(srv.ListenAndServe())
-	log.Fatal(err)
+	app.logger.PrintInfo("starting server", map[string]string{
+		"port": srv.Addr,
+		"env":  app.config.env,
+	})
+	err = srv.ListenAndServe()
+	if err != nil {
+		logger.PrintFatal(err, nil)
+	}
+}
 
+func openDB(cfg config) (*sql.DB, error) {
+	db, err := sql.Open("pgx", cfg.dsn)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

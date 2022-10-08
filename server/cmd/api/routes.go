@@ -9,8 +9,17 @@ import (
 func (app *application) routes() http.Handler {
 	router := httprouter.New()
 
-	router.HandlerFunc(http.MethodGet, "/:url", app.resolveURL)
+	router.NotFound = http.HandlerFunc(app.notFoundResponse)
+	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
+
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthCheck)
+
+	// URL
+	router.HandlerFunc(http.MethodGet, "/v1/resolve/:url", app.resolveURL)
 	router.HandlerFunc(http.MethodPost, "/v1/shorten", app.shortenURL)
 
-	return app.enableCORS(router)
+	// USERS
+	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.registerUser)
+
+	return app.logRequest(app.enableCORS(router))
 }

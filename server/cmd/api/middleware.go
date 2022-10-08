@@ -12,3 +12,18 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 
 	})
 }
+
+func (app *application) logRequest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		properties := map[string]string{
+			"remote_address": r.RemoteAddr,
+			"request_method": r.Method,
+			"request_url":    r.URL.String(),
+		}
+
+		app.logger.PrintInfo("request log", properties)
+
+		next.ServeHTTP(w, r)
+	})
+}

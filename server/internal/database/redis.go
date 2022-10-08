@@ -18,12 +18,10 @@ func CreateClient() *redis.Client {
 		DB:       0,
 	})
 
-	ping, err := rdb.Ping(Ctx).Result()
+	_, err := rdb.Ping(Ctx).Result()
 	if err != nil {
 		log.Fatalf("Error init redis: %v", err)
 	}
-
-	log.Println("Redis started successfully:", ping)
 
 	return rdb
 }

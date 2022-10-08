@@ -39,7 +39,20 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 	rdb := database.CreateClient()
 	defer rdb.Close()
 
-	val, err := rdb.Get(database.Ctx, r.RemoteAddr).Result()
+	var id string
+	if body.CustomShort == "" {
+		id = uuid.New().String()[:6]
+	} else {
+		id = body.CustomShort
+	}
+
+	val, _ := rdb.Get(database.Ctx, id).Result()
+	if val != "" {
+		app.errorResponseJSON(w, r, http.StatusForbidden, "custom short URL is already in use")
+		return
+	}
+
+	val, err = rdb.Get(database.Ctx, r.RemoteAddr).Result()
 	if err == redis.Nil {
 		_ = rdb.Set(database.Ctx, r.RemoteAddr, os.Getenv("API_QUOTA"), 30*time.Minute)
 	} else {
@@ -48,19 +61,6 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 			ttl, _ := rdb.TTL(database.Ctx, r.RemoteAddr).Result()
 			app.errorResponseJSON(w, r, http.StatusServiceUnavailable, fmt.Sprintf("Rate limit exceeded, try again in %d", ttl/time.Nanosecond/time.Minute))
 		}
-	}
-
-	var id string
-
-	if body.CustomShort == "" {
-		id = uuid.New().String()[:6]
-	} else {
-		id = body.CustomShort
-	}
-
-	val, _ = rdb.Get(database.Ctx, id).Result()
-	if val != "" {
-		app.errorResponseJSON(w, r, http.StatusForbidden, "custom short URL is already in use")
 	}
 
 	if body.Expiry == 0 {
