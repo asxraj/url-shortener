@@ -20,6 +20,7 @@ func (app *application) routes() http.Handler {
 
 	// USERS
 	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.registerUser)
+	router.HandlerFunc(http.MethodPost, "/v1/users/login", app.loginUser)
 
-	return app.logRequest(app.enableCORS(router))
+	return app.recoverPanic(app.logRequest(app.enableCORS(app.authenticate(router))))
 }

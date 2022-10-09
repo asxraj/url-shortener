@@ -60,6 +60,7 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 		if valInt <= 0 {
 			ttl, _ := rdb.TTL(database.Ctx, r.RemoteAddr).Result()
 			app.errorResponseJSON(w, r, http.StatusServiceUnavailable, fmt.Sprintf("Rate limit exceeded, try again in %d", ttl/time.Nanosecond/time.Minute))
+			return
 		}
 	}
 

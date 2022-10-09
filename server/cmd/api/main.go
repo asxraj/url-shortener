@@ -19,6 +19,10 @@ type config struct {
 	port int
 	env  string
 	dsn  string
+
+	jwt struct {
+		secret string
+	}
 }
 
 type application struct {
@@ -41,6 +45,7 @@ func main() {
 	}
 
 	cfg.dsn = os.Getenv("SHORTURL_DB_DSN")
+	cfg.jwt.secret = os.Getenv("JWT_SECRET")
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 

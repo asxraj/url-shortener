@@ -10,22 +10,48 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	ErrDuplicateEmail = errors.New("duplicate email")
+)
+
+var AnonymousUser = &User{}
+
 type User struct {
-	Firstname      string    `json:"first_name"`
-	Lastname       string    `json:"last_name"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Password       string    `json:"password"`
-	hashedPassword []byte    `json:"-"`
-	CreatedAt      time.Time `json:"created_at,omitempty"`
+	ID        int      `json:"id"`
+	Firstname string   `json:"first_name"`
+	Lastname  string   `json:"last_name"`
+	Email     string   `json:"email"`
+	Password  password `json:"-"`
+	Activated bool     `json:"activated"`
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
+}
+
+type password struct {
+	plaintext *string
+	hash      []byte
 }
 
 type UserModel struct {
 	DB *sql.DB
 }
 
-func (u *User) Matches(plaintextPassword string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword(u.hashedPassword, []byte(plaintextPassword))
+func (p *password) Set(plainttextPassword string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(plainttextPassword), 12)
+	if err != nil {
+		return err
+	}
+
+	p.plaintext = &plainttextPassword
+	p.hash = hash
+
+	return nil
+}
+
+func (p *password) Matches(plaintextPassword string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintextPassword))
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
@@ -37,51 +63,101 @@ func (u *User) Matches(plaintextPassword string) (bool, error) {
 	return true, nil
 }
 
-func (u *User) Set() error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), 12)
-	if err != nil {
-		return err
-	}
-	u.hashedPassword = hash
-	return nil
-}
-
 func ValidateEmail(v *validator.Validator, email string) {
 	v.Check(email != "", "email", "cannot be empty")
 	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
 }
 
-func ValidatePassword(v *validator.Validator, password string) {
-	v.Check(password != "", "password", "cannot be empty")
-	v.Check(len([]rune(password)) >= 8, "password", "must be at least 8 characters long")
-	v.Check(len([]rune(password)) <= 72, "password", "must not be more than 72 charachters long")
+func ValidatePasswordPlaintext(v *validator.Validator, password password) {
+	v.Check(*password.plaintext != "", "password", "cannot be empty")
+	v.Check(len([]rune(*password.plaintext)) >= 8, "password", "must be at least 8 characters long")
+	v.Check(len([]rune(*password.plaintext)) <= 72, "password", "must not be more than 72 charachters long")
 }
 
 func ValidateUser(v *validator.Validator, user *User) {
 	v.Check(user.Firstname != "", "first_name", "cannot be empty")
 	v.Check(user.Lastname != "", "last_name", "cannot be empty")
-	v.Check(user.Username != "", "username", "cannot be empty")
-	v.Check(len([]rune(user.Username)) <= 16, "name", "must not be more than 16 characters long")
 
 	ValidateEmail(v, user.Email)
-	ValidatePassword(v, user.Password)
+
+	if user.Password.plaintext != nil {
+		ValidatePasswordPlaintext(v, user.Password)
+	}
+
+	if user.Password.hash == nil {
+		panic("missing password hash for user")
+	}
 }
 
 func (m UserModel) Insert(user *User) error {
 	query := `
-	    INSERT INTO users (first_name, last_name, username, email, password_hash) 
-        VALUES ($1,$2,$3,$4,$5)
+	    INSERT INTO users (first_name, last_name, email, hashed_password) 
+        VALUES ($1,$2,$3,$4)
+		RETURNING id
 	`
 
-	args := []any{user.Firstname, user.Lastname, user.Username, user.Email, user.hashedPassword}
+	args := []any{user.Firstname, user.Lastname, user.Email, user.Password.hash}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := m.DB.ExecContext(ctx, query, args...)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID)
 	if err != nil {
-		return err
+		switch {
+		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:
+			return ErrDuplicateEmail
+		default:
+			return err
+		}
 	}
 
 	return nil
+}
+
+func (m UserModel) GetUserByEmail(user *User) error {
+	query := `
+        SELECT id, first_name, last_name, email, hashed_password
+        FROM users 
+        WHERE email = $1
+    `
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, user.Email).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrRecordNotFound
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m UserModel) Get(id int) (*User, error) {
+	query := `
+        SELECT id, first_name, last_name, email, hashed_password
+        FROM users 
+        WHERE id = $1
+    `
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var user *User
+
+	err := m.DB.QueryRowContext(ctx, query, user.Email).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
 }
