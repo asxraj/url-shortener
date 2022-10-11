@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 
 import Head from "next/head";
-import Navbar from "../components/Navbar";
 import Input from "../components//Input";
 import logo from "../public/assets/google.svg";
 import Image from "next/image";
@@ -11,11 +10,42 @@ import { FormErrors } from "../utils/types";
 import Link from "next/link";
 import { AiOutlineLink } from "react-icons/ai";
 import Footer from "../components/Footer";
+import { useRouter } from "next/router";
 
 export default function Login() {
   const [errors, setErrors] = useState<FormErrors>();
 
-  const handleSubmit = () => {};
+  const router = useRouter();
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+
+    const data: FormData = new FormData(e.target);
+    const payload = Object.fromEntries(data.entries());
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
+
+    console.log(payload);
+
+    await fetch("http://localhost:4001/v1/users/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: headers,
+    })
+      .then((response) =>
+        response.json().then((data) => {
+          if (data.error) {
+            setErrors(data.error);
+            console.log(data);
+          } else {
+            router.push("/login");
+          }
+        })
+      )
+      .catch((err) => console.log(err));
+
+    console.log("form was submitted");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-r from-sky-400 to-blue-500">
@@ -60,24 +90,16 @@ export default function Login() {
                 title="first name"
                 type="text"
                 placeholder="Gavin"
-                hasError={errors?.email ? true : false}
-                errorMsg={errors?.email}
+                hasError={errors?.first_name ? true : false}
+                errorMsg={errors?.first_name}
               />
               <Input
                 name="last_name"
                 title="last name"
                 type="text"
                 placeholder="Belson"
-                hasError={errors?.email ? true : false}
-                errorMsg={errors?.email}
-              />
-              <Input
-                name="username"
-                title="username"
-                type="text"
-                placeholder="Tethics1337"
-                hasError={errors?.email ? true : false}
-                errorMsg={errors?.email}
+                hasError={errors?.last_name ? true : false}
+                errorMsg={errors?.last_name}
               />
               <Input
                 name="email"
@@ -91,6 +113,7 @@ export default function Login() {
                 name="password"
                 title="Password"
                 type="password"
+                minLength={8}
                 placeholder="••••••••"
                 hasError={errors?.password ? true : false}
                 errorMsg={errors?.password}

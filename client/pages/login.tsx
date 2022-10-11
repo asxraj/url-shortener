@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 
 import Head from "next/head";
 import Navbar from "../components/Navbar";
@@ -11,11 +11,54 @@ import { FormErrors } from "../utils/types";
 import Link from "next/link";
 import { AiOutlineLink } from "react-icons/ai";
 import Footer from "../components/Footer";
+import { AuthContext } from "../context/AuthContext";
+import { useRouter } from "next/router";
+import { GetServerSideProps } from "next";
 
 export default function Login() {
+  const { jwt, setJwt, setUser } = useContext(AuthContext);
   const [errors, setErrors] = useState<FormErrors>();
+  const router = useRouter();
 
-  const handleSubmit = () => {};
+  useEffect(() => {
+    if (jwt !== "") {
+      router.push("/");
+    }
+  }, [jwt, router]);
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+
+    const data = new FormData(e.target);
+    const payload = Object.fromEntries(data.entries());
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
+
+    const requestOptions = {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: headers,
+    };
+
+    await fetch("http://localhost:4001/v1/users/login", requestOptions)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          setErrors(data.error);
+        } else if (data.jwt) {
+          setJwt(data.jwt);
+          localStorage.setItem("jwt", data.jwt);
+          setUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          router.push("/");
+        }
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const googleLogin = (e: any) => {
+    e.preventDefault();
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-r from-sky-400 to-blue-500">
@@ -43,7 +86,7 @@ export default function Login() {
               </h1>
 
               <button
-                type="submit"
+                onClick={googleLogin}
                 className="flex items-center gap-2 justify-center text-md font-medium py-2 border-[1px] text-blue-600 border-blue-600 rounded-lg select-none transition-all hover:bg-blue-100"
               >
                 <Image src={logo} alt="google.svg" height={20} width={20} />
@@ -68,6 +111,7 @@ export default function Login() {
                 title="Password"
                 type="password"
                 placeholder="••••••••"
+                minLength={8}
                 hasError={errors?.password ? true : false}
                 errorMsg={errors?.password}
               />

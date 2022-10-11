@@ -11,7 +11,7 @@ const Home: NextPage = () => {
   const [error, setError] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const submitHandler = (e: any) => {
+  const submitHandler = async (e: any) => {
     e.preventDefault();
 
     const data: FormData = new FormData(e.target);
@@ -33,7 +33,7 @@ const Home: NextPage = () => {
 
     console.log(request);
 
-    fetch("http://localhost:4001/v1/shorten", {
+    await fetch("http://localhost:4001/v1/shorten", {
       method: "POST",
       body: JSON.stringify(request),
       headers: headers,
@@ -44,8 +44,6 @@ const Home: NextPage = () => {
         })
       )
       .catch((err) => console.log(err));
-
-    console.log("form was submitted");
   };
   return (
     <div className="min-h-screen flex flex-col  bg-gradient-to-r from-sky-400 to-blue-500">
