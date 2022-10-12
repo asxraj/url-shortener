@@ -99,7 +99,6 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
-
 		user, err := app.models.Users.Get(userID)
 		if err != nil {
 			switch {
@@ -110,6 +109,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			}
 			return
 		}
+		fmt.Println(user)
 
 		r = app.contextSetUser(r, user)
 

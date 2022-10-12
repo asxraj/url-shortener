@@ -147,9 +147,9 @@ func (m UserModel) Get(id int) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	var user *User
+	var user User
 
-	err := m.DB.QueryRowContext(ctx, query, user.Email).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash)
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -159,5 +159,30 @@ func (m UserModel) Get(id int) (*User, error) {
 		}
 	}
 
-	return user, nil
+	return &user, nil
+}
+
+func (m UserModel) SaveURL(user *User, longUrl, shortUrl string, expires time.Time) error {
+	// Look up automatic deletion when expiry is less than now()
+	query := `
+	    INSERT INTO urls (user_id, long_url, short_url, expires) 
+        VALUES ($1,$2,$3,$4)
+	`
+
+	args := []any{user.ID, longUrl, shortUrl, expires}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID)
+	if err != nil {
+		switch {
+		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:
+			return ErrDuplicateEmail
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
