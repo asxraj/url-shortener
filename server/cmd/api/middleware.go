@@ -109,7 +109,6 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			}
 			return
 		}
-		fmt.Println(user)
 
 		r = app.contextSetUser(r, user)
 

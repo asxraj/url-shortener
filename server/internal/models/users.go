@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/asxraj/url-shortener/internal/validator"
@@ -63,9 +65,17 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 	return true, nil
 }
 
+func ValidateUrl(v *validator.Validator, url string) {
+
+	newUrl := strings.Split(url, "/")[0]
+	newUrl = strings.Replace(newUrl, "www.", "", 1)
+	v.Check(validator.Matches(newUrl, validator.UrlRX), "url", "not valid url")
+	v.Check(!strings.Contains(os.Getenv("DOMAIN"), newUrl), "url", "url domain is banned")
+}
+
 func ValidateEmail(v *validator.Validator, email string) {
 	v.Check(email != "", "email", "cannot be empty")
-	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
+	v.Check(validator.Matches(email, validator.EmailRX), "email", "not a valid email address")
 }
 
 func ValidatePasswordPlaintext(v *validator.Validator, password password) {
@@ -174,7 +184,7 @@ func (m UserModel) SaveURL(user *User, longUrl, shortUrl string, expires time.Ti
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID)
+	_, err := m.DB.ExecContext(ctx, query, args...)
 	if err != nil {
 		switch {
 		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:

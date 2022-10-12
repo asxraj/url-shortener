@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/asxraj/url-shortener/internal/database"
+	"github.com/asxraj/url-shortener/internal/models"
+	"github.com/asxraj/url-shortener/internal/validator"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 )
@@ -29,6 +31,7 @@ type response struct {
 
 // try out giving localhost as name to see if the loop will happen
 func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
+
 	input := &request{}
 
 	err := app.readJSON(w, r, &input)
@@ -39,6 +42,7 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 
 	var identifier string
 	var api_quota int
+
 	user := app.contextGetUser(r)
 	if user.ID != 0 {
 		identifier = fmt.Sprint(user.ID)
@@ -51,14 +55,25 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fmt.Println(user)
 
-	// Add URL Validation - After deployment with CI/CD
 	u, err := url.Parse(input.URL)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(u.Scheme, u.Host)
+
+	if u.Scheme == "" {
+		u.Host = input.URL
+	}
+	input.URL = u.Host
+
+	v := validator.New()
+
+	models.ValidateUrl(v, input.URL)
+
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
 
 	if input.CustomShort == "" {
 		input.CustomShort = uuid.New().String()[:6]
@@ -97,13 +112,15 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.models.Users.SaveURL(user, input.URL, input.CustomShort, time.Now().Add(input.Expiry*time.Hour))
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
+	if user.ID != 0 {
+		err = app.models.Users.SaveURL(user, input.URL, input.CustomShort, time.Now().Add(input.Expiry*time.Hour))
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 	}
 
-	resp := response{URL: input.URL, Expiry: input.Expiry, XRateLimitReset: 30}
+	resp := response{URL: "https//" + input.URL, Expiry: input.Expiry, XRateLimitReset: 30}
 
 	rdb.Decr(database.Ctx, identifier)
 
