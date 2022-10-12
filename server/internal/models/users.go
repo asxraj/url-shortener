@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -189,6 +190,32 @@ func (m UserModel) SaveURL(user *User, longUrl, shortUrl string, expires time.Ti
 		switch {
 		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:
 			return ErrDuplicateEmail
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m UserModel) ClickURL(shortUrl, ip string) error {
+	// Look up automatic deletion when expiry is less than now()
+	query := `
+	    INSERT INTO urlclicks (urls_short_url, ip_address) 
+        VALUES ($1,$2)
+	`
+
+	args := []any{shortUrl, ip}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := m.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		switch {
+		case err.Error() == `ERROR: insert or update on table "urlclicks" violates foreign key constraint "urlclicks_short_url_fkey" (SQLSTATE 23503)`:
+			fmt.Println("Did we reach here")
+			return err
 		default:
 			return err
 		}

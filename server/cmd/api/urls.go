@@ -13,6 +13,7 @@ import (
 	"github.com/asxraj/url-shortener/internal/validator"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/julienschmidt/httprouter"
 )
 
 type request struct {
@@ -27,6 +28,32 @@ type response struct {
 	Expiry          time.Duration `json:"expiry"`
 	XRateRemaining  int           `json:"rate_limit"`
 	XRateLimitReset time.Duration `json:"rate_limit_reset"`
+}
+
+func (app *application) resolveURL(w http.ResponseWriter, r *http.Request) {
+	url := httprouter.ParamsFromContext(r.Context()).ByName("url")
+
+	rdb := database.CreateClient()
+	defer rdb.Close()
+
+	val, err := rdb.Get(database.Ctx, url).Result()
+	if err == redis.Nil {
+		app.errorResponseJSON(w, r, http.StatusNotFound, map[string]any{"error": "short url not found in the database"})
+		return
+	} else if err != nil {
+		app.errorResponseJSON(w, r, http.StatusInternalServerError, "cannot connect to DB")
+		return
+	}
+
+	err = app.models.Users.ClickURL(url, r.RemoteAddr)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusMovedPermanently, map[string]any{
+		"to": "https://" + val,
+	}, nil)
 }
 
 // try out giving localhost as name to see if the loop will happen
@@ -60,13 +87,14 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	v := validator.New()
 
 	if u.Scheme == "" {
 		u.Host = input.URL
+	} else if u.Scheme == "http" {
+		v.AddError("url", "http is not allowed")
 	}
 	input.URL = u.Host
-
-	v := validator.New()
 
 	models.ValidateUrl(v, input.URL)
 
@@ -74,6 +102,9 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
+
+	// enforcing https
+	input.URL = u.Host
 
 	if input.CustomShort == "" {
 		input.CustomShort = uuid.New().String()[:6]
@@ -120,7 +151,7 @@ func (app *application) shortenURL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := response{URL: "https//" + input.URL, Expiry: input.Expiry, XRateLimitReset: 30}
+	resp := response{URL: input.URL, Expiry: input.Expiry, XRateLimitReset: 30}
 
 	rdb.Decr(database.Ctx, identifier)
 
