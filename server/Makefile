@@ -5,13 +5,11 @@ include .envrc
 # ==================================================================================== #
 
 ## help: print this help message
-.PHONY: help
 help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
 
 # Create the new confirm target.
-.PHONY: confirm
 confirm:
 	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
 
@@ -20,35 +18,38 @@ confirm:
 # ==================================================================================== #
 
 ## run/api: run the cmd/api application
-.PHONY: run/api
 run/api:
 	go run ./cmd/api
 
 ## test: run the cmd/api tests with -v flag
-.PHONY: test
 test:
 	go test -v ./cmd/api
 
-## db/psql: connect to the database using psql
-.PHONY: db/psql
-db/psql:
-	psql ${SHORTURL_DB_DSN}
+## psql: connect to the database using psql
+psql:
+	docker exec -it postgres14 psql ${SHORTURL_DB_DSN}
+## postgres: run image container 
+postgres:
+	docker run --name postgres14 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=pa55word -d postgres:14-alpine
 
-## db/migrations/new name=$1: create a new database migration
-.PHONY: db/migrations/new
-db/migrations/new:
-	@echo 'Creating migration files for ${name}...'
-	migrate create -seq -ext=.sql -dir=./migrations ${name}
+## createdb: create shorturl database
+createdb:
+	docker exec -it postgres14 createdb shorturl
+
+## dropdb: drop database shorturl
+dropdb:
+	docker exec -it postgres14 dropdb shorturl
 
 ## db/migrations/up: apply all up database migrations
-.PHONY: db/migrations/up
-db/migrations/up: 
+migrate/up: 
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${SHORTURL_DB_DSN} up
 
 ## db/migrations/down: apply all down database migrations
-.PHONY: db/migrations/down
-db/migrations/down: confirm
+migrate/down:
 	@echo 'Running down migrations...'
 	migrate -path ./migrations -database ${SHORTURL_DB_DSN} down
 
+
+ 
+.PHONY: help confirm run/api test psql postgres createdb dropdb migrate/up migrate/down 

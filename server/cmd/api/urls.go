@@ -36,6 +36,7 @@ func (app *application) resolveURL(w http.ResponseWriter, r *http.Request) {
 	rdb := database.CreateClient()
 	defer rdb.Close()
 
+	// Getting long url form short url
 	val, err := rdb.Get(database.Ctx, url).Result()
 	if err == redis.Nil {
 		app.errorResponseJSON(w, r, http.StatusNotFound, map[string]any{"error": "short url not found in the database"})
@@ -45,6 +46,7 @@ func (app *application) resolveURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Adding some info about the click to PostgreSQL
 	err = app.models.Users.ClickURL(url, r.RemoteAddr)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
