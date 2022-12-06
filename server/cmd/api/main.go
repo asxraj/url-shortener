@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
-	"time"
 
 	"github.com/asxraj/url-shortener/internal/database"
 	"github.com/asxraj/url-shortener/internal/jsonlog"
@@ -55,6 +53,7 @@ func main() {
 		logger.PrintFatal(err, nil)
 	}
 	defer db.Close()
+
 	logger.PrintInfo("database connection pool established", nil)
 
 	app := &application{
@@ -63,19 +62,7 @@ func main() {
 		models: models.New(db),
 	}
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  time.Minute,
-	}
-
-	app.logger.PrintInfo("starting server", map[string]string{
-		"port": srv.Addr,
-		"env":  app.config.env,
-	})
-	err = srv.ListenAndServe()
+	err = app.serve()
 	if err != nil {
 		logger.PrintFatal(err, nil)
 	}

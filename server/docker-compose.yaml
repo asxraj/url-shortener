@@ -6,6 +6,8 @@ services:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=pa55word
       - POSTGRES_DB=shorturl
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis

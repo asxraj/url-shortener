@@ -57,6 +57,6 @@ rebuild:
 	@echo 'Removing docker image'
 	docker rmi server-api
 	@echo 'Docker compose up'
-	docker compose up
+	docker compose up -d
  
 .PHONY: help confirm run/api test psql postgres createdb dropdb migrate/up migrate/down 
