@@ -23,11 +23,11 @@ run/api:
 
 ## test: run the cmd/api tests with -v flag
 test:
-	go test -v ./cmd/api
+	go test -v ./...
 
 ## psql: connect to the database using psql
 psql:
-	docker exec -it postgres14 psql ${SHORTURL_DB_DSN}
+	docker exec -it server-postgres-1 psql ${SHORTURL_DB_DSN}
 ## postgres: run image container 
 postgres:
 	docker run --name postgres14 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=pa55word -d postgres:14-alpine
@@ -50,6 +50,13 @@ migrate/down:
 	@echo 'Running down migrations...'
 	migrate -path ./migrations -database ${SHORTURL_DB_DSN} down
 
-
+## rebuild: deleting docker image and rebuilding	
+rebuild: 
+	@echo 'Docker compose down'
+	docker compose down
+	@echo 'Removing docker image'
+	docker rmi server-api
+	@echo 'Docker compose up'
+	docker compose up
  
 .PHONY: help confirm run/api test psql postgres createdb dropdb migrate/up migrate/down 

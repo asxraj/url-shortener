@@ -20,5 +20,5 @@ COPY migrations ./migration
 
 EXPOSE 4000
 
- CMD ["/app/main"]
+CMD ["/app/main"]
 ENTRYPOINT [ "/app/start.sh" ]

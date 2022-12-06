@@ -19,7 +19,8 @@ type config struct {
 	port int
 	env  string
 	dsn  string
-
+	smtp struct {
+	}
 	jwt struct {
 		secret string
 	}

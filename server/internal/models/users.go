@@ -102,12 +102,12 @@ func ValidateUser(v *validator.Validator, user *User) {
 
 func (m UserModel) Insert(user *User) error {
 	query := `
-	    INSERT INTO users (first_name, last_name, email, hashed_password) 
-        VALUES ($1,$2,$3,$4)
+	    INSERT INTO users (first_name, last_name, email, hashed_password, activated) 
+        VALUES ($1,$2,$3,$4,$5)
 		RETURNING id
 	`
 
-	args := []any{user.Firstname, user.Lastname, user.Email, user.Password.hash}
+	args := []any{user.Firstname, user.Lastname, user.Email, user.Password.hash, user.Activated}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
