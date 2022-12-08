@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -125,6 +126,35 @@ func (m UserModel) Insert(user *User) error {
 	return nil
 }
 
+func (m UserModel) Update(user *User) error {
+	query := `
+        UPDATE users 
+        SET first_name = $1, last_name = $2, email = $3, hashed_password = $4, activated = $5 
+        WHERE id = $6
+    `
+
+	args := []any{user.Firstname, user.Lastname, user.Email, user.Password.hash, user.Activated, user.ID}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := m.DB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+
+	return nil
+}
+
 func (m UserModel) GetUserByEmail(user *User) error {
 	query := `
         SELECT id, first_name, last_name, email, hashed_password
@@ -222,4 +252,43 @@ func (m UserModel) ClickURL(shortUrl, ip string) error {
 	}
 
 	return nil
+}
+
+func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+	query := `
+        SELECT users.id, users.first_name, users.last_name, users.email, users.hashed_password, users.activated
+        FROM users
+        INNER JOIN tokens
+        ON users.id = tokens.user_id
+        WHERE tokens.hash = $1
+        AND tokens.scope = $2 
+        AND tokens.expiry > $3`
+
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+
+	args := []any{tokenHash[:], tokenScope, time.Now()}
+
+	var user User
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&user.ID,
+		&user.Firstname,
+		&user.Lastname,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &user, nil
 }
