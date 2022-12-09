@@ -22,6 +22,10 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.registerUser)
 	router.HandlerFunc(http.MethodPost, "/v1/users/login", app.loginUser)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.activateUserHandler)
+	router.HandlerFunc(http.MethodPut, "/v1/users/password", app.updateUserPasswordHandler)
+
+	// TOKENS
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/password-reset", app.createPasswordResetTokenHandler)
 
 	return app.recoverPanic(app.logRequest(app.enableCORS(app.authenticate(router))))
 }

@@ -80,10 +80,10 @@ func ValidateEmail(v *validator.Validator, email string) {
 	v.Check(validator.Matches(email, validator.EmailRX), "email", "not a valid email address")
 }
 
-func ValidatePasswordPlaintext(v *validator.Validator, password password) {
-	v.Check(*password.plaintext != "", "password", "cannot be empty")
-	v.Check(len([]rune(*password.plaintext)) >= 8, "password", "must be at least 8 characters long")
-	v.Check(len([]rune(*password.plaintext)) <= 72, "password", "must not be more than 72 charachters long")
+func ValidatePasswordPlaintext(v *validator.Validator, passwordPlaintext string) {
+	v.Check(passwordPlaintext != "", "password", "cannot be empty")
+	v.Check(len([]rune(passwordPlaintext)) >= 8, "password", "must be at least 8 characters long")
+	v.Check(len([]rune(passwordPlaintext)) <= 72, "password", "must not be more than 72 charachters long")
 }
 
 func ValidateUser(v *validator.Validator, user *User) {
@@ -93,7 +93,7 @@ func ValidateUser(v *validator.Validator, user *User) {
 	ValidateEmail(v, user.Email)
 
 	if user.Password.plaintext != nil {
-		ValidatePasswordPlaintext(v, user.Password)
+		ValidatePasswordPlaintext(v, *user.Password.plaintext)
 	}
 
 	if user.Password.hash == nil {
@@ -157,7 +157,7 @@ func (m UserModel) Update(user *User) error {
 
 func (m UserModel) GetUserByEmail(user *User) error {
 	query := `
-        SELECT id, first_name, last_name, email, hashed_password
+        SELECT id, first_name, last_name, email, hashed_password, activated
         FROM users 
         WHERE email = $1
     `
@@ -165,7 +165,7 @@ func (m UserModel) GetUserByEmail(user *User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, user.Email).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash)
+	err := m.DB.QueryRowContext(ctx, query, user.Email).Scan(&user.ID, &user.Firstname, &user.Lastname, &user.Email, &user.Password.hash, &user.Activated)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
