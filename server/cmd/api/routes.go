@@ -26,6 +26,7 @@ func (app *application) routes() http.Handler {
 
 	// TOKENS
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/password-reset", app.createPasswordResetTokenHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/tokens/activation", app.createActivationTokenHandler)
 
 	return app.recoverPanic(app.logRequest(app.enableCORS(app.authenticate(router))))
 }
